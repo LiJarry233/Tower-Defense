@@ -1,0 +1,14 @@
+node_modules/
+dist/
+build/
+_build/
+build2/
+*.exe
+*.dll
+*.zip
+.godot/
+.import
+.vscode/extensions.json
+*.output
+assets/Skybox/
+assets/models/character/character.fbx

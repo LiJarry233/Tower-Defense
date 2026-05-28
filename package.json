@@ -1,0 +1,26 @@
+{
+  "name": "tower-defense",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "start": "vite build && electron .",
+    "electron": "electron . --dev"
+  },
+  "main": "electron.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "three": "^0.184.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.184.1",
+    "electron": "^42.2.0",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.14"
+  }
+}

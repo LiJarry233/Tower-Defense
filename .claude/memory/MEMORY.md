@@ -1,0 +1,5 @@
+- [弹丸零建模](projectiles-no-models.md) — 3D弹丸全部用raylib内置几何体（DrawSphere/DrawCylinder/DrawCone），不加载模型文件
+- [UI素材](ui-kenney-pack.md) — 所有UI使用 assets/UI/kenney_ui-pack/ 下的按钮、图标、滑块、字体，不自己画UI形状
+- [资产清单](asset-inventory.md) — 全部资产已就绪：城墙/主角/怪物/Boss/炮台3D模型、地面贴图、特效序列帧、天空方案
+- [模型映射](model-mapping.md) — 每个游戏实体→模型文件精确对应：monster1=近战/2=远程/3=肉盾，主角=军事士兵，Boss=boss.glb
+- [打勾计划](check-off-plan.md) — 每完成一个阶段在 development_plan.txt 对应处打 [x]
