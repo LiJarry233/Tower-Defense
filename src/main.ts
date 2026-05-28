@@ -9,6 +9,7 @@ import { LEVELS } from "./config";
 import { spawnHitSpark, spawnExplosion } from "./vfx";
 import { saveGame, loadGame } from "./save";
 import { WALL_MAX_HP } from "./config";
+import { preloadSounds, playSound, startBGM } from "./audio";
 
 // ── Renderer ──
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -25,8 +26,8 @@ scene.fog = new THREE.Fog(0x332211, 100, 400);
 
 // ── Camera ──
 export const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 1, 600);
-camera.position.set(0, 30, 45);
-camera.lookAt(0, 13, -30);
+camera.position.set(0, 22, -55);
+camera.lookAt(0, 12, 30);
 
 // ── Lights ──
 scene.add(new THREE.AmbientLight(0x665544, 0.4));
@@ -98,12 +99,14 @@ const turretShop = new TurretShop(
   () => {
     if (Game.gold < 500 || !shopTarget) return;
     Game.gold -= 500;
+    playSound("equipment", false, 0.5);
     placeTurret(shopTarget.slotIndex, shopTarget.pos, 0);
     turretShop.hide(); Game.state = "playing"; shopTarget = null;
   },
   () => {
     if (Game.gold < 1000 || !shopTarget) return;
     Game.gold -= 1000;
+    playSound("equipment", false, 0.5);
     placeTurret(shopTarget.slotIndex, shopTarget.pos, 1);
     turretShop.hide(); Game.state = "playing"; shopTarget = null;
   },
@@ -232,7 +235,7 @@ const keys: Record<string, boolean> = {};
 window.addEventListener("keydown", (e) => (keys[e.key.toLowerCase()] = true));
 window.addEventListener("keyup", (e) => (keys[e.key.toLowerCase()] = false));
 
-let camPivot = new THREE.Vector3(0, 14, -30);
+let camPivot = new THREE.Vector3(0, 12, 30);
 let rightDrag = false, prevMX = 0, prevMY = 0;
 
 window.addEventListener("mousedown", (e) => {
@@ -254,7 +257,7 @@ window.addEventListener("mousemove", (e) => {
 window.addEventListener("wheel", (e) => {
   const dir = camera.position.clone().sub(camPivot);
   const dist = dir.length();
-  dir.normalize().multiplyScalar(Math.max(5, Math.min(150, dist + e.deltaY * 0.5)));
+  dir.normalize().multiplyScalar(Math.max(5, Math.min(150, dist + e.deltaY * 0.25)));
   camera.position.copy(camPivot.clone().add(dir));
 });
 window.addEventListener("contextmenu", (e) => e.preventDefault());
@@ -385,6 +388,7 @@ function animate() {
         spawnHitSpark(bullet.mesh.position.clone());
         if (bullet.isAOE) {
           spawnExplosion(bullet.mesh.position.clone());
+          playSound("bomb", false, 0.5);
           for (const other of enemies) {
             if (other === enemy || other.dead) continue;
             if (other.model.position.distanceTo(enemy.model.position) < 10) {
@@ -407,6 +411,70 @@ function animate() {
 
   renderer.render(scene, camera);
 }
-animate();
+
+// ── Upgrade UI (U key) ──
+let upgradeOpen = false;
+window.addEventListener("keydown", (e) => {
+  if (e.key.toLowerCase() === "u" && Game.state === "playing") {
+    upgradeOpen = !upgradeOpen;
+    toggleUpgradeUI();
+  }
+});
+
+function toggleUpgradeUI() {
+  const id = "upgrade-panel";
+  let panel = document.getElementById(id);
+  if (upgradeOpen) {
+    if (!panel) {
+      panel = document.createElement("div");
+      panel.id = id;
+      panel.style.cssText = "position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:12px;padding:25px;z-index:20;color:#fff;font:16px monospace";
+      panel.style.backgroundImage = "url(/UI/kenney_ui-pack/PNG/Grey/Default/button_rectangle_depth_flat.png)";
+      panel.style.backgroundSize = "100% 100%";
+      const cost = 200 + (Game.playerLevel - 1) * 300;
+      panel.innerHTML = `<div style="font-size:22px;color:#ffcc44">主角升级 Lv.${Game.playerLevel}</div>
+        <div style="color:#ccc">伤害: ${Game.playerDamage} +100</div>
+        <div style="color:#ccc">冷却: ${Game.playerCD.toFixed(1)}s -0.1s</div>
+        <div style="color:#ffcc00">费用: ${cost} 金币</div>`;
+      const buyBtn = document.createElement("div");
+      buyBtn.textContent = "升级";
+      buyBtn.style.cssText = "width:180px;height:40px;display:flex;justify-content:center;align-items:center;font-size:18px;color:#88ff88;font-weight:bold;cursor:pointer";
+      buyBtn.style.backgroundImage = "url(/UI/kenney_ui-pack/PNG/Grey/Double/button_rectangle_depth_gradient.png)";
+      buyBtn.style.backgroundSize = "100% 100%";
+      buyBtn.onclick = () => {
+        const c = 200 + (Game.playerLevel - 1) * 300;
+        if (Game.gold >= c) {
+          Game.gold -= c;
+          Game.playerLevel++;
+          Game.playerDamage += 100;
+          Game.playerCD = Math.max(0.1, Game.playerCD - 0.1);
+          playSound("leve_up", false, 0.5);
+          toggleUpgradeUI();
+          toggleUpgradeUI(); // re-open with updated values
+        }
+      };
+      panel.appendChild(buyBtn);
+      const backBtn = document.createElement("div");
+      backBtn.textContent = "返回";
+      backBtn.style.cssText = "width:180px;height:35px;display:flex;justify-content:center;align-items:center;font-size:16px;color:#ff8888;cursor:pointer";
+      backBtn.style.backgroundImage = "url(/UI/kenney_ui-pack/PNG/Grey/Default/button_rectangle_depth_gradient.png)";
+      backBtn.style.backgroundSize = "100% 100%";
+      backBtn.onclick = () => { upgradeOpen = false; toggleUpgradeUI(); };
+      panel.appendChild(backBtn);
+      document.body.appendChild(panel);
+    } else {
+      panel.style.display = "flex";
+    }
+  } else if (panel) {
+    panel.remove();
+  }
+}
+
+// Audio init on first click
+let _audioInit = false;
+window.addEventListener("click", () => {
+  if (!_audioInit) { _audioInit = true; preloadSounds().then(() => startBGM()); }
+}, { once: true });
 
 console.log("Tower Defense — Phase 1 — Ready");
+animate();

@@ -1,5 +1,0 @@
-[gd_scene load_steps=2 format=3 uid="uid://bh5y488wpg5ef"]
-
-[ext_resource type="PackedScene" uid="uid://be0y5qp86d3ei" path="res://assets/models/monsters/monster1/Zombie Running.fbx" id="1_10wpt"]
-
-[node name="Zombie Running" instance=ExtResource("1_10wpt")]

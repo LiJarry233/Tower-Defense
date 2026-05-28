@@ -77,6 +77,9 @@ export class Hud {
     this.killVal = el("span", { fontSize: "16px", color: "#ccc" }, `Kills: ${Game.kills}/${Game.totalEnemies}`);
     wrap.appendChild(this.killVal);
 
+    const lvRow = el("div", { fontSize: "14px", color: "#88ccff", marginTop: "4px" }, `Player Lv.${Game.playerLevel} | U=升级`);
+    wrap.appendChild(lvRow);
+
     root.appendChild(wrap);
   }
 

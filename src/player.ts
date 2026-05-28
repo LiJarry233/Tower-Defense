@@ -2,7 +2,8 @@ import * as THREE from "three";
 import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
 import { camera, bullets } from "./main";
 import { Bullet } from "./bullet";
-import { PLAYER_BASE_DAMAGE, PLAYER_BASE_COOLDOWN } from "./config";
+import { Game } from "./gamestate";
+import { playSound } from "./audio";
 
 export class Player {
   model = new THREE.Group();
@@ -62,16 +63,10 @@ export class Player {
 
   tryShoot(): boolean {
     if (this.cooldown > 0) return false;
-    this.cooldown = PLAYER_BASE_COOLDOWN;
-    const count = 1;
-    for (let i = 0; i < count; i++) {
-      let dir = this.shootDir.clone();
-      if (count > 1) {
-        dir.applyAxisAngle(new THREE.Vector3(0, 1, 0), (i - (count - 1) * 0.5) * 0.06);
-      }
-      const o = this.model.position.clone().add(new THREE.Vector3(0, 1.5, 0));
-      bullets.push(new Bullet(o, dir, 40, PLAYER_BASE_DAMAGE, 0xffdd00, 0xff8800));
-    }
+    this.cooldown = Game.playerCD;
+    playSound("fire", false, 0.3);
+    const o = this.model.position.clone().add(new THREE.Vector3(0, 1.5, 0));
+    bullets.push(new Bullet(o, this.shootDir.clone(), 40, Game.playerDamage, 0xffdd00, 0xff8800));
     return true;
   }
 }

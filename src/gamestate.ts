@@ -7,4 +7,7 @@ export const Game = {
   totalEnemies: 50,
   level: 1,
   state: "playing" as "menu" | "playing" | "paused" | "victory" | "defeat",
+  playerLevel: 1,
+  playerDamage: 100,
+  playerCD: 0.5,
 };

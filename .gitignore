@@ -12,3 +12,13 @@ build2/
 *.output
 assets/Skybox/
 assets/models/character/character.fbx
+# Unity project files
+Library/
+Temp/
+Logs/
+UserSettings/
+Packages/
+ProjectSettings/
+*.asset
+*.unity
+*.meta

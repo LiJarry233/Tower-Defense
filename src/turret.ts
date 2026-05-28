@@ -3,6 +3,7 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { scene } from "./main";
 import { Bullet } from "./bullet";
 import { NORMAL_TURRET_DAMAGE, NORMAL_TURRET_CD, AOE_TURRET_DAMAGE, AOE_TURRET_CD } from "./config";
+import { playSound } from "./audio";
 
 const gltfLoader = new GLTFLoader();
 
@@ -61,6 +62,7 @@ export class Turret {
     const dir = nearest.model.position.clone().sub(this.model.position).normalize();
     const origin = this.model.position.clone().add(new THREE.Vector3(0, 2, 0));
     const isAOE = this.type === 1;
+    playSound("fire", false, 0.3);
     import("./main").then((m) => {
       m.bullets.push(new Bullet(origin, dir, 50, dmg, isAOE ? 0xff6600 : 0x00ccff, isAOE ? 0xff3300 : 0x004488, isAOE));
     });

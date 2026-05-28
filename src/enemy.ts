@@ -8,6 +8,7 @@ import { MELEE_HP, MELEE_SPEED, MELEE_DAMAGE, MELEE_ATTACK_INTERVAL, MELEE_GOLD,
          TANK_HP, TANK_SPEED, TANK_DAMAGE, TANK_ATTACK_INTERVAL, TANK_GOLD,
          BOSS_HP, BOSS_SPEED, BOSS_DAMAGE, BOSS_ATTACK_INTERVAL } from "./config";
 import { Game } from "./gamestate";
+import { playSound } from "./audio";
 
 export type EnemyType = "melee" | "ranged" | "tank" | "boss";
 
@@ -21,7 +22,7 @@ interface TypeCfg {
 const CFG: Record<EnemyType, TypeCfg> = {
   melee: {
     hp: MELEE_HP, speed: MELEE_SPEED, damage: MELEE_DAMAGE, cd: MELEE_ATTACK_INTERVAL, gold: MELEE_GOLD,
-    range: 2.5, scale: 5, movement: "stopgo", stepDist: 5,
+    range: 5, scale: 5, movement: "stopgo", stepDist: 4.5,
     models: {
       walk: "/models/monsters/monster1/Zombie Running.fbx",
       attack: "/models/monsters/monster1/Zombie Punching.fbx",
@@ -39,7 +40,7 @@ const CFG: Record<EnemyType, TypeCfg> = {
   },
   tank: {
     hp: TANK_HP, speed: TANK_SPEED, damage: TANK_DAMAGE, cd: TANK_ATTACK_INTERVAL, gold: TANK_GOLD,
-    range: 3, scale: 0.05, movement: "stopgo", stepDist: 3,
+    range: 5, scale: 0.05, movement: "stopgo", stepDist: 3,
     models: {
       walk: "/models/monsters/monster3/Walking.fbx",
       attack: "/models/monsters/monster3/Attack.fbx",
@@ -57,7 +58,6 @@ const CFG: Record<EnemyType, TypeCfg> = {
   },
 };
 
-// Cache: path → { group, clips }
 const cache = new Map<string, { group: THREE.Group; clips: THREE.AnimationClip[] }>();
 const fbxLoader = new FBXLoader();
 const gltfLoader = new GLTFLoader();
@@ -76,11 +76,8 @@ function loadOne(path: string, cb: (group: THREE.Group) => void) {
     clone.animations = g.animations;
     cb(clone);
   };
-  if (path.endsWith(".glb")) {
-    gltfLoader.load(path, (gltf) => onLoad(gltf.scene));
-  } else {
-    fbxLoader.load(path, onLoad);
-  }
+  if (path.endsWith(".glb")) { gltfLoader.load(path, (gltf) => onLoad(gltf.scene)); }
+  else { fbxLoader.load(path, onLoad); }
 }
 
 export class Enemy {
@@ -103,6 +100,7 @@ export class Enemy {
     this.model.position.copy(pos);
     this.model.scale.setScalar(this.cfg.scale);
     this.model.visible = false;
+    this.model.lookAt(this.wallTarget);
 
     const keys = ["walk", "attack", "death"] as const;
     let loaded = 0;
@@ -120,13 +118,9 @@ export class Enemy {
           this.actions[key] = action;
         }
         loaded++;
-        if (loaded === 3) {
-          this._switchTo("walk");
-          this.model.visible = true;
-        }
+        if (loaded === 3) { this._switchTo("walk"); this.model.visible = true; }
       });
     }
-
     scene.add(this.model);
   }
 
@@ -135,25 +129,22 @@ export class Enemy {
     for (const k of ["walk", "attack", "death"]) {
       const m = this.models[k];
       if (m) m.visible = (k === key);
+      const action = this.actions[k];
+      if (action) { if (k === key) { action.reset().play(); } else { action.stop(); } }
     }
     this.prevAnimTime = 0;
   }
 
   update(dt: number) {
-    // Update all mixers (each drives its own skeleton)
-    for (const k of ["walk", "attack", "death"]) {
-      const m = this.mixers[k];
-      if (m) m.update(dt);
-    }
+    const active = this.mixers[this.state];
+    if (active) active.update(dt);
     if (this.dead) return;
 
     const dist = this.model.position.distanceTo(this.wallTarget);
 
     if (dist > this.range) {
       if (this.state !== "walk") this._switchTo("walk");
-
       if (this.cfg.movement === "stopgo") {
-        // 动画循环完成 → 前进
         const action = this.actions["walk"];
         if (action) {
           const t = action.time;
@@ -166,7 +157,6 @@ export class Enemy {
           this.prevAnimTime = t;
         }
       } else {
-        // 持续移动
         const dir = this.wallTarget.clone().sub(this.model.position).normalize();
         dir.y = 0;
         this.model.position.addScaledVector(dir, this.speed * dt);
@@ -179,6 +169,8 @@ export class Enemy {
         this.attackTimer = this.cfg.cd;
         Game.wallHP -= this.damage;
         if (Game.wallHP <= 0) { Game.wallHP = 0; Game.state = "defeat"; }
+        const sound = (this.cfg.movement === "continuous" && this.cfg.range > 5) ? "far_attatchment" : "attatchment";
+        playSound(sound, false, 0.3);
       }
     }
   }
@@ -189,16 +181,9 @@ export class Enemy {
       this.dead = true;
       Game.gold += this.gold;
       Game.kills++;
+      playSound("normaldeath", false, 0.3);
       this._switchTo("death");
-      const orig = this.model.scale.clone();
-      const start = performance.now();
-      const anim = () => {
-        const s = Math.max(0, 1 - (performance.now() - start) / 800);
-        this.model.scale.copy(orig).multiplyScalar(s);
-        if (s > 0) requestAnimationFrame(anim);
-        else this.dispose();
-      };
-      anim();
+      setTimeout(() => this.dispose(), 800);
     }
   }
 
